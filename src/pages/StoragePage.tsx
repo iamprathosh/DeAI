@@ -76,6 +76,10 @@ const StoragePage = () => {
     return content.length > 40 ? `${content.substring(0, 40)}...` : content;
   };
 
+  useEffect(() => {
+    console.log("Current pathname:", window.location.pathname);
+  }, [window.location.pathname]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">

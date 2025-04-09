@@ -1,14 +1,11 @@
-
-import { LampDemo } from '@/components/ui/lamp';
-import DecentralizedAppVisual from '@/components/DecentralizedAppVisual';
+import { SparklesPreview, SparklesPreviewDark, SparklesPreviewColorful } from "@/components/ui/demo";
 
 const Index = () => {
   return (
     <div className="w-full">
-      <LampDemo />
-      <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 to-blue-50">
-        <DecentralizedAppVisual />
-      </div>
+      <SparklesPreview />
+      <SparklesPreviewDark />
+      <SparklesPreviewColorful />
     </div>
   );
 };

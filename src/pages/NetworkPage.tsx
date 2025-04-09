@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import NetworkVisualization from '@/components/NetworkVisualization';
+import BackendVisualizer from '@/components/BackendVisualizer';
 import Navigation from '@/components/Navigation';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -136,12 +137,12 @@ const NetworkPage = () => {
           </Card>
         </div>
         
-        <Card className="p-4 bg-slate-800 border-slate-700">
+        <Card className="p-4 bg-slate-800 border-slate-700 mb-8">
           <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
             <Activity className="h-5 w-5 text-blue-400" />
             Network Visualization
           </h2>
-          <div className="h-[600px] relative bg-slate-900 rounded-lg overflow-hidden">
+          <div className="h-[500px] relative bg-slate-900 rounded-lg overflow-hidden">
             <NetworkVisualization />
           </div>
           <div className="mt-4 text-sm text-slate-300">
@@ -149,6 +150,9 @@ const NetworkPage = () => {
             Data is routed through virtual nodes and stored with content addressing similar to IPFS.</p>
           </div>
         </Card>
+        
+        {/* Backend Services Visualization */}
+        <BackendVisualizer />
       </div>
     </div>
   );

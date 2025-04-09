@@ -16,7 +16,9 @@ const App = () => {
   const location = useLocation();
 
   useEffect(() => {
-    console.log("Current pathname:", location.pathname);
+    if (process.env.NODE_ENV === 'development') {
+      console.log("Current pathname:", location.pathname);
+    }
   }, [location.pathname]);
 
   return (

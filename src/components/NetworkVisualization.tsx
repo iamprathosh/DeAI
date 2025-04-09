@@ -1,5 +1,4 @@
-
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 
 interface Node {
   id: number;
@@ -23,11 +22,22 @@ const NetworkVisualization = () => {
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const animationRef = useRef<number>(0);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [lowPerformanceMode, setLowPerformanceMode] = useState(false);
   
   // Generate network data
   const [nodes, setNodes] = useState<Node[]>([]);
   const [connections, setConnections] = useState<Connection[]>([]);
   const [dataFlowProgress, setDataFlowProgress] = useState(0);
+  
+  // Check if device is low-powered
+  useEffect(() => {
+    // Simple check for mobile or low-powered devices
+    const isMobile = window.innerWidth < 768;
+    const isMobileOrSlow = isMobile || 
+      (window.navigator.hardwareConcurrency && window.navigator.hardwareConcurrency < 4);
+    
+    setLowPerformanceMode(isMobileOrSlow);
+  }, []);
   
   // Initialize network
   useEffect(() => {
@@ -59,9 +69,10 @@ const NetworkVisualization = () => {
         });
       }
       
-      // Standard nodes
-      for (let i = 0; i < 20; i++) {
-        const angle = (i / 20) * Math.PI * 2;
+      // Standard nodes - reduce count for mobile/low-powered devices
+      const nodeCount = lowPerformanceMode ? 10 : 20;
+      for (let i = 0; i < nodeCount; i++) {
+        const angle = (i / nodeCount) * Math.PI * 2;
         const distance = 0.35 + Math.random() * 0.15;
         newNodes.push({
           id: i + 6,
@@ -74,7 +85,7 @@ const NetworkVisualization = () => {
         });
       }
       
-      // Create connections
+      // Create connections with fewer connections on mobile
       const newConnections: Connection[] = [];
       
       // Connect LLM to all IPFS nodes
@@ -88,7 +99,9 @@ const NetworkVisualization = () => {
       }
       
       // Connect some standard nodes to LLM
-      for (let i = 6; i < 15; i++) {
+      for (let i = 6; i < 15 && i < newNodes.length; i++) {
+        if (lowPerformanceMode && i % 2 === 0) continue; // Skip some connections in low performance mode
+        
         newConnections.push({
           source: 0,
           target: i,
@@ -97,9 +110,10 @@ const NetworkVisualization = () => {
         });
       }
       
-      // Connect standard nodes to each other
+      // Connect standard nodes to each other - fewer for mobile
+      const connectionsPerNode = lowPerformanceMode ? 1 : 3;
       for (let i = 6; i < newNodes.length; i++) {
-        const numConnections = 1 + Math.floor(Math.random() * 3);
+        const numConnections = 1 + Math.floor(Math.random() * connectionsPerNode);
         for (let j = 0; j < numConnections; j++) {
           const target = 6 + Math.floor(Math.random() * (newNodes.length - 6));
           if (target !== i) {
@@ -116,7 +130,7 @@ const NetworkVisualization = () => {
       // Connect IPFS nodes to each other
       for (let i = 1; i <= 5; i++) {
         for (let j = i + 1; j <= 5; j++) {
-          if (Math.random() > 0.3) {
+          if (Math.random() > (lowPerformanceMode ? 0.5 : 0.3)) {
             newConnections.push({
               source: i,
               target: j,
@@ -131,7 +145,7 @@ const NetworkVisualization = () => {
       setConnections(newConnections);
       setIsInitialized(true);
     }
-  }, [isInitialized]);
+  }, [isInitialized, lowPerformanceMode]);
 
   // Handle canvas resize
   useEffect(() => {
@@ -148,6 +162,14 @@ const NetworkVisualization = () => {
     updateDimensions();
     return () => window.removeEventListener('resize', updateDimensions);
   }, []);
+
+  // Throttle animation for better performance on Netlify and mobile
+  const useThrottledAnimation = useCallback(() => {
+    if (lowPerformanceMode) {
+      return canvasRef.current && window.requestAnimationFrame && Math.random() > 0.5;
+    }
+    return canvasRef.current && window.requestAnimationFrame;
+  }, [lowPerformanceMode]);
 
   // Animation loop
   useEffect(() => {
@@ -343,7 +365,9 @@ const NetworkVisualization = () => {
       ctx.scale(1 / window.devicePixelRatio, 1 / window.devicePixelRatio);
       
       // Continue animation
-      animationRef.current = requestAnimationFrame(animate);
+      if (useThrottledAnimation()) {
+        animationRef.current = requestAnimationFrame(animate);
+      }
     };
     
     animationRef.current = requestAnimationFrame(animate);
@@ -351,7 +375,7 @@ const NetworkVisualization = () => {
     return () => {
       cancelAnimationFrame(animationRef.current);
     };
-  }, [dimensions, nodes, connections, isInitialized]);
+  }, [dimensions, nodes, connections, isInitialized, useThrottledAnimation]);
   
   return <canvas ref={canvasRef} className="w-full h-full" />;
 };

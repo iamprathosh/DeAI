@@ -1,8 +1,7 @@
-
 /**
  * Browser-based IPFS-like storage system using IndexedDB
  */
-import { addToStore, getAllFromStore, getFromStore } from "./databaseManager";
+import { addToStore, getAllFromStore, getFromStore, deleteFromStore } from "./databaseManager";
 
 // Type definition for stored content
 export type IPFSContent = {
@@ -59,6 +58,18 @@ export const getFromIPFS = async (cid: string): Promise<string> => {
   
   console.log(`Content retrieved for CID: ${cid}`);
   return result.content;
+};
+
+// Delete content from our simulated IPFS storage
+export const deleteContent = async (cid: string): Promise<boolean> => {
+  try {
+    await deleteFromStore('content', cid);
+    console.log(`Content deleted for CID: ${cid}`);
+    return true;
+  } catch (error) {
+    console.error(`Error deleting content with CID: ${cid}`, error);
+    throw error;
+  }
 };
 
 // List all CIDs in the storage

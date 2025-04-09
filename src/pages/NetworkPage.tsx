@@ -63,6 +63,10 @@ const NetworkPage = () => {
     };
   }, []);
 
+  useEffect(() => {
+    console.log("Current pathname:", window.location.pathname);
+  }, [window.location.pathname]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">

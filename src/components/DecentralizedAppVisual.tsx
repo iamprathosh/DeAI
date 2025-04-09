@@ -2,9 +2,12 @@
 import { useState } from 'react';
 import NetworkVisualization from './NetworkVisualization';
 import ChatInterface from './ChatInterface';
+import NetworkStats from './NetworkStats';
+import IPFSVisualizer from './IPFSVisualizer';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sun, Star, Database, Lock, Cpu } from 'lucide-react';
 
 const DecentralizedAppVisual = () => {
@@ -12,12 +15,10 @@ const DecentralizedAppVisual = () => {
   const [activeNode, setActiveNode] = useState('LLM');
   
   const handleSendMessage = (message: string) => {
-    // Show toast for demonstration
-    setTimeout(() => {
-      toast({
-        description: "Message processed through decentralized network",
-      });
-    }, 500);
+    // The actual processing is now handled by the ChatInterface component
+    toast({
+      description: "Message sent to decentralized network",
+    });
   };
 
   return (
@@ -38,17 +39,20 @@ const DecentralizedAppVisual = () => {
               Decentralized AI Network
             </h1>
             <p className="mt-2 text-slate-600">
-              Powered by peer-to-peer connections, LLM processing and IPFS storage
+              Powered by browser-based peer-to-peer simulation, LLM processing and IPFS-like storage
             </p>
           </div>
           
-          <div className="flex flex-col lg:flex-row items-center justify-center gap-8">
+          <div className="flex flex-col lg:flex-row items-start justify-center gap-8">
             {/* Left side - Chat interface */}
             <div className="w-full lg:w-1/2">
               <ChatInterface onSendMessage={handleSendMessage} />
+              <div className="mt-4">
+                <NetworkStats />
+              </div>
             </div>
             
-            {/* Right side - Network info */}
+            {/* Right side - Network info and visualization */}
             <div className="w-full lg:w-1/2 space-y-4">
               <Card className="p-5 bg-white bg-opacity-90 backdrop-blur-lg shadow-lg">
                 <div className="flex items-center justify-between mb-4">
@@ -95,7 +99,7 @@ const DecentralizedAppVisual = () => {
                       <span>Peer Nodes</span>
                     </div>
                     <Badge variant="secondary" className="bg-accent-magenta/10 text-accent-magenta border-accent-magenta/20">
-                      23 Active
+                      Browser-based
                     </Badge>
                   </div>
                   
@@ -113,19 +117,38 @@ const DecentralizedAppVisual = () => {
                 </div>
               </Card>
               
-              <Card className="p-5 bg-white bg-opacity-75 backdrop-blur-lg shadow-lg overflow-hidden">
-                <h3 className="font-medium text-lg mb-3">Data Flow Visualization</h3>
-                <div className="flex items-center justify-center h-52 relative">
-                  <div className="absolute inset-0 flex items-center justify-center opacity-25">
-                    <div className="w-24 h-24 rounded-full border-4 border-accent-blue animate-pulse-slow"></div>
-                    <div className="absolute w-36 h-36 rounded-full border-2 border-purple animate-pulse-slow" style={{ animationDelay: '1s' }}></div>
-                    <div className="absolute w-48 h-48 rounded-full border border-teal animate-pulse-slow" style={{ animationDelay: '2s' }}></div>
-                  </div>
-                  <div className="text-xs text-slate-500 text-center absolute bottom-0">
-                    Encrypted data flowing through decentralized network
-                  </div>
-                </div>
-              </Card>
+              <Tabs defaultValue="dataflow">
+                <TabsList className="grid grid-cols-2">
+                  <TabsTrigger value="dataflow">Data Flow</TabsTrigger>
+                  <TabsTrigger value="ipfs">IPFS Storage</TabsTrigger>
+                </TabsList>
+                <TabsContent value="dataflow" className="mt-2">
+                  <Card className="p-5 bg-white bg-opacity-75 backdrop-blur-lg shadow-lg overflow-hidden">
+                    <h3 className="font-medium text-lg mb-3">Data Flow Visualization</h3>
+                    <div className="flex items-center justify-center h-52 relative">
+                      <div className="absolute inset-0 flex items-center justify-center opacity-25">
+                        <div className="w-24 h-24 rounded-full border-4 border-accent-blue animate-pulse-slow"></div>
+                        <div className="absolute w-36 h-36 rounded-full border-2 border-purple animate-pulse-slow" style={{ animationDelay: '1s' }}></div>
+                        <div className="absolute w-48 h-48 rounded-full border border-teal animate-pulse-slow" style={{ animationDelay: '2s' }}></div>
+                      </div>
+                      <div className="text-xs text-slate-500 text-center absolute bottom-0">
+                        Browser-based simulation of decentralized data flow
+                      </div>
+                    </div>
+                  </Card>
+                </TabsContent>
+                <TabsContent value="ipfs" className="mt-2">
+                  <Card className="p-5 bg-white bg-opacity-75 backdrop-blur-lg shadow-lg overflow-hidden">
+                    <h3 className="font-medium text-lg mb-3">IPFS Visualization</h3>
+                    <div className="h-52">
+                      <IPFSVisualizer className="w-full h-full" />
+                    </div>
+                    <div className="text-xs text-slate-500 text-center mt-2">
+                      Content-addressed storage using IndexedDB
+                    </div>
+                  </Card>
+                </TabsContent>
+              </Tabs>
             </div>
           </div>
         </div>

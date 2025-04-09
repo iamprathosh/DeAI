@@ -4,12 +4,16 @@ import { Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { processQuery } from '@/utils/llmSimulation';
+import { useToast } from '@/components/ui/use-toast';
 
 interface Message {
   id: number;
   text: string;
   isUser: boolean;
   timestamp: Date;
+  cid?: string;
+  processingPath?: string[];
 }
 
 interface ChatInterfaceProps {
@@ -17,6 +21,7 @@ interface ChatInterfaceProps {
 }
 
 const ChatInterface = ({ onSendMessage }: ChatInterfaceProps) => {
+  const { toast } = useToast();
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([
     { 
@@ -29,7 +34,7 @@ const ChatInterface = ({ onSendMessage }: ChatInterfaceProps) => {
   const [isThinking, setIsThinking] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  const handleSend = () => {
+  const handleSend = async () => {
     if (input.trim() === '') return;
     
     const userMessage: Message = {
@@ -39,30 +44,51 @@ const ChatInterface = ({ onSendMessage }: ChatInterfaceProps) => {
       timestamp: new Date()
     };
     
-    setMessages([...messages, userMessage]);
+    setMessages(prev => [...prev, userMessage]);
     onSendMessage(input);
     setInput('');
     setIsThinking(true);
     
-    // Simulate AI response
-    setTimeout(() => {
-      const responses = [
-        "The decentralized network ensures your data remains private and secure across the network. IPFS technology allows for persistent storage without central servers.",
-        "That's an interesting question about LLMs. These models operate across our network to provide accurate and responsive answers while maintaining privacy.",
-        "In our decentralized architecture, data flows through encrypted pathways between nodes, with IPFS providing content-addressed storage rather than location-based retrieval.",
-        "The advantages of this approach include enhanced privacy, reduced central points of failure, and improved resilience against network outages or censorship.",
-      ];
+    try {
+      // Process the query through our simulated backend
+      const { response, responseCid, processingPath } = await processQuery(input);
       
       const aiMessage: Message = {
         id: messages.length + 2,
-        text: responses[Math.floor(Math.random() * responses.length)],
+        text: response,
+        isUser: false,
+        timestamp: new Date(),
+        cid: responseCid,
+        processingPath
+      };
+      
+      setMessages(msgs => [...msgs, aiMessage]);
+      
+      // Show notification about the decentralized processing
+      toast({
+        title: "Decentralized Processing Complete",
+        description: `Routed through ${processingPath.length} nodes. Response stored at CID: ${responseCid.substring(0, 10)}...`,
+      });
+    } catch (error) {
+      console.error('Error processing query:', error);
+      
+      const errorMessage: Message = {
+        id: messages.length + 2,
+        text: "Sorry, there was an error processing your request through the decentralized network.",
         isUser: false,
         timestamp: new Date()
       };
       
-      setMessages(msgs => [...msgs, aiMessage]);
+      setMessages(msgs => [...msgs, errorMessage]);
+      
+      toast({
+        title: "Network Error",
+        description: "Failed to process through decentralized network.",
+        variant: "destructive"
+      });
+    } finally {
       setIsThinking(false);
-    }, 2000);
+    }
   };
   
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -82,7 +108,7 @@ const ChatInterface = ({ onSendMessage }: ChatInterfaceProps) => {
         <h2 className="text-lg font-medium text-slate-800">Decentralized AI Assistant</h2>
         <div className="flex items-center gap-2 mt-1">
           <div className="h-2 w-2 rounded-full bg-accent-blue animate-pulse"></div>
-          <span className="text-xs text-slate-500">Connected to the network</span>
+          <span className="text-xs text-slate-500">Connected to the browser-based network</span>
         </div>
       </div>
       
@@ -101,6 +127,11 @@ const ChatInterface = ({ onSendMessage }: ChatInterfaceProps) => {
               }`}
             >
               <p className="text-sm">{message.text}</p>
+              {message.cid && (
+                <div className="text-xs mt-1 opacity-70">
+                  CID: {message.cid.substring(0, 10)}...
+                </div>
+              )}
               <div className="text-xs mt-1 opacity-70 text-right">
                 {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </div>
@@ -116,6 +147,7 @@ const ChatInterface = ({ onSendMessage }: ChatInterfaceProps) => {
                 <div className="w-2 h-2 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                 <div className="w-2 h-2 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '0.4s' }}></div>
               </div>
+              <div className="text-xs mt-2 text-slate-500">Processing through decentralized network...</div>
             </div>
           </div>
         )}

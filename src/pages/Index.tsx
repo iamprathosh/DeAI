@@ -1,3 +1,4 @@
+
 import DecentralizedAppVisual from "@/components/DecentralizedAppVisual";
 
 const Index = () => {

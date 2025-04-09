@@ -2,6 +2,17 @@
 /**
  * Browser-based IPFS-like storage system using IndexedDB
  */
+import { addToStore, getAllFromStore, getFromStore } from "./databaseManager";
+
+// Type definition for stored content
+export type IPFSContent = {
+  cid: string;
+  content: string;
+  timestamp: number;
+  size?: number;
+  type?: string;
+  metadata?: Record<string, any>;
+};
 
 // Generate a content identifier (CID) similar to IPFS
 const generateCID = (content: string): string => {
@@ -16,93 +27,96 @@ const generateCID = (content: string): string => {
   return 'Qm' + Math.abs(hash).toString(16).padStart(44, '0');
 };
 
-// Initialize the IndexedDB database
-const initDB = async (): Promise<IDBDatabase> => {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open('IPFSSimDB', 1);
-    
-    request.onupgradeneeded = (event) => {
-      const db = (event.target as IDBOpenDBRequest).result;
-      if (!db.objectStoreNames.contains('contents')) {
-        db.createObjectStore('contents', { keyPath: 'cid' });
-      }
-    };
-    
-    request.onsuccess = (event) => {
-      resolve((event.target as IDBOpenDBRequest).result);
-    };
-    
-    request.onerror = (event) => {
-      reject((event.target as IDBOpenDBRequest).error);
-    };
-  });
-};
-
 // Add content to our simulated IPFS storage
-export const addToIPFS = async (content: string): Promise<string> => {
+export const addToIPFS = async (
+  content: string, 
+  metadata?: Record<string, any>
+): Promise<string> => {
   const cid = generateCID(content);
-  const db = await initDB();
   
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(['contents'], 'readwrite');
-    const store = transaction.objectStore('contents');
-    
-    const request = store.put({
-      cid,
-      content,
-      timestamp: Date.now()
-    });
-    
-    request.onsuccess = () => {
-      resolve(cid);
-      console.log(`Content added with CID: ${cid}`);
-    };
-    
-    request.onerror = () => {
-      reject(request.error);
-    };
-  });
+  const ipfsContent: IPFSContent = {
+    cid,
+    content,
+    timestamp: Date.now(),
+    size: new Blob([content]).size,
+    type: typeof content,
+    metadata
+  };
+  
+  await addToStore('content', ipfsContent);
+  
+  console.log(`Content added with CID: ${cid}`);
+  return cid;
 };
 
 // Get content from our simulated IPFS storage
 export const getFromIPFS = async (cid: string): Promise<string> => {
-  const db = await initDB();
+  const result = await getFromStore<IPFSContent>('content', cid);
   
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(['contents'], 'readonly');
-    const store = transaction.objectStore('contents');
-    const request = store.get(cid);
-    
-    request.onsuccess = () => {
-      if (request.result) {
-        resolve(request.result.content);
-        console.log(`Content retrieved for CID: ${cid}`);
-      } else {
-        reject(new Error('Content not found'));
-      }
-    };
-    
-    request.onerror = () => {
-      reject(request.error);
-    };
-  });
+  if (!result) {
+    throw new Error('Content not found');
+  }
+  
+  console.log(`Content retrieved for CID: ${cid}`);
+  return result.content;
 };
 
 // List all CIDs in the storage
 export const listAllCIDs = async (): Promise<string[]> => {
-  const db = await initDB();
+  const contents = await getAllFromStore<IPFSContent>('content');
+  return contents.map(item => item.cid);
+};
+
+// Get all content with metadata
+export const getAllContent = async (): Promise<IPFSContent[]> => {
+  return await getAllFromStore<IPFSContent>('content');
+};
+
+// Get content metadata
+export const getContentInfo = async (cid: string): Promise<Omit<IPFSContent, 'content'> | null> => {
+  const content = await getFromStore<IPFSContent>('content', cid);
   
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(['contents'], 'readonly');
-    const store = transaction.objectStore('contents');
-    const request = store.getAllKeys();
+  if (!content) {
+    return null;
+  }
+  
+  // Return everything except the actual content
+  const { content: _, ...info } = content;
+  return info;
+};
+
+// Update content metadata
+export const updateContentMetadata = async (
+  cid: string, 
+  metadata: Record<string, any>
+): Promise<boolean> => {
+  const content = await getFromStore<IPFSContent>('content', cid);
+  
+  if (!content) {
+    return false;
+  }
+  
+  content.metadata = { ...content.metadata, ...metadata };
+  await addToStore('content', content);
+  
+  return true;
+};
+
+// Search content by metadata
+export const searchContent = async (
+  query: Record<string, any>
+): Promise<IPFSContent[]> => {
+  const allContent = await getAllFromStore<IPFSContent>('content');
+  
+  return allContent.filter(item => {
+    if (!item.metadata) return false;
     
-    request.onsuccess = () => {
-      resolve(request.result as string[]);
-    };
+    for (const [key, value] of Object.entries(query)) {
+      if (item.metadata[key] !== value) {
+        return false;
+      }
+    }
     
-    request.onerror = () => {
-      reject(request.error);
-    };
+    return true;
   });
 };

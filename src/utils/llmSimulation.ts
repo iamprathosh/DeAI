@@ -1,6 +1,6 @@
 
 import { sendNetworkMessage } from './decentralizedNetwork';
-import { addToIPFS, getFromIPFS } from './ipfsStorage';
+import { addToIPFS, getFromIPFS, updateContentMetadata } from './ipfsStorage';
 
 // Simulate basic language model capabilities
 const generateResponse = (prompt: string): string => {
@@ -25,7 +25,7 @@ export const processQuery = async (query: string): Promise<{
   console.log('Processing query:', query);
   
   // Step 1: Store the query in IPFS
-  const queryCid = await addToIPFS(query);
+  const queryCid = await addToIPFS(query, { type: 'query' });
   console.log('Query stored with CID:', queryCid);
   
   // Step 2: Send query to LLM node through network
@@ -48,7 +48,20 @@ export const processQuery = async (query: string): Promise<{
   await sendNetworkMessage('llm-main', ipfsNodeId, 'storage', response);
   processingPath.push(ipfsNodeId);
   
-  const responseCid = await addToIPFS(response);
+  const responseCid = await addToIPFS(response, { 
+    type: 'response',
+    queryId: queryCid,
+    timestamp: Date.now(),
+    path: processingPath.join('->')
+  });
+  
+  // Link the query to this response
+  await updateContentMetadata(queryCid, {
+    responseCid,
+    processed: true,
+    timestamp: Date.now()
+  });
+  
   console.log('Response stored with CID:', responseCid);
   
   // Step 5: Send response back through network

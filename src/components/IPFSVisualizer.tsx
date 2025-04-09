@@ -49,7 +49,7 @@ const IPFSVisualizer = ({ className = '' }: IPFSVisualizerProps) => {
         
         // Add connecting lines between some hexagons
         if (i > 0 && Math.random() > 0.3) {
-          const prevHex = hexagonsRef.current.children[Math.floor(Math.random() * i)] as SVGElement;
+          const prevHex = hexagonsRef.current.children[Math.floor(Math.random() * i)] as SVGPathElement;
           const connection = document.createElementNS('http://www.w3.org/2000/svg', 'line');
           
           // Get centers of hexagons
@@ -135,7 +135,7 @@ const IPFSVisualizer = ({ className = '' }: IPFSVisualizerProps) => {
         y += Math.sin(anim.angle) * distance;
         
         // Check bounds and bounce
-        const bbox = anim.el.getBBox();
+        const bbox = (anim.el as SVGGraphicsElement).getBBox();
         const parentWidth = hexagonsRef.current?.clientWidth || 300;
         const parentHeight = hexagonsRef.current?.clientHeight || 300;
         

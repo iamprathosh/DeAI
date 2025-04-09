@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import NetworkVisualization from './NetworkVisualization';
 import ChatInterface from './ChatInterface';
@@ -6,12 +5,11 @@ import NetworkStats from './NetworkStats';
 import IPFSVisualizer from './IPFSVisualizer';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Sun, Star, Database, Lock, Cpu } from 'lucide-react';
 
 const DecentralizedAppVisual = () => {
-  const { toast } = useToast();
   const [activeNode, setActiveNode] = useState('LLM');
   
   const handleSendMessage = (message: string) => {

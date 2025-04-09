@@ -1,11 +1,10 @@
-
 import { useState, useRef, useEffect } from 'react';
 import { Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { processQuery } from '@/utils/llmSimulation';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from "sonner";
 
 interface Message {
   id: number;
@@ -21,7 +20,6 @@ interface ChatInterfaceProps {
 }
 
 const ChatInterface = ({ onSendMessage }: ChatInterfaceProps) => {
-  const { toast } = useToast();
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([
     { 
@@ -84,7 +82,6 @@ const ChatInterface = ({ onSendMessage }: ChatInterfaceProps) => {
       toast({
         title: "Network Error",
         description: "Failed to process through decentralized network.",
-        variant: "destructive"
       });
     } finally {
       setIsThinking(false);
@@ -97,7 +94,6 @@ const ChatInterface = ({ onSendMessage }: ChatInterfaceProps) => {
     }
   };
   
-  // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -161,7 +157,11 @@ const ChatInterface = ({ onSendMessage }: ChatInterfaceProps) => {
             placeholder="Ask anything..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter') {
+                handleSend();
+              }
+            }}
             className="flex-grow bg-slate-50"
             disabled={isThinking}
           />

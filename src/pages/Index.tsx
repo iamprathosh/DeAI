@@ -1,11 +1,10 @@
-import { SparklesPreview, SparklesPreviewDark, SparklesPreviewColorful } from "@/components/ui/demo";
+
+import DecentralizedAppVisual from "@/components/DecentralizedAppVisual";
 
 const Index = () => {
   return (
     <div className="w-full">
-      <SparklesPreview />
-      <SparklesPreviewDark />
-      <SparklesPreviewColorful />
+      <DecentralizedAppVisual />
     </div>
   );
 };

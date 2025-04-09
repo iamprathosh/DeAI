@@ -3,8 +3,9 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Navigation from '@/components/Navigation';
 import { getAllContent, deleteContent } from '@/utils/ipfsStorage';
+import { loadNetworkState } from '@/utils/decentralizedNetwork';
 import { toast } from "sonner";
-import { Database, Trash2, FileText, Code, Image, FileBadge } from 'lucide-react';
+import { Database, Trash2, FileText, Code, Image, FileBadge, RefreshCw } from 'lucide-react';
 import { formatBytes } from '@/utils/helpers';
 
 interface StorageItem {
@@ -18,14 +19,20 @@ interface StorageItem {
 const StoragePage = () => {
   const [storedItems, setStoredItems] = useState<StorageItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   const fetchStorageItems = async () => {
     setIsLoading(true);
+    setError(null);
     try {
+      // Make sure the network is initialized first
+      await loadNetworkState();
+      
       const items = await getAllContent();
       setStoredItems(items);
     } catch (error) {
       console.error('Error fetching content:', error);
+      setError('Failed to load storage items. Database might not be initialized properly.');
       toast.error('Failed to load storage items');
     } finally {
       setIsLoading(false);
@@ -69,6 +76,38 @@ const StoragePage = () => {
     return content.length > 40 ? `${content.substring(0, 40)}...` : content;
   };
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+        <Navigation />
+        <div className="container mx-auto py-16 flex flex-col items-center justify-center">
+          <div className="animate-spin mb-4">
+            <RefreshCw className="h-10 w-10 text-purple-500" />
+          </div>
+          <p className="text-slate-800 text-lg">Loading storage data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+        <Navigation />
+        <div className="container mx-auto py-16 flex flex-col items-center justify-center">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-6">
+            <h2 className="text-red-500 text-xl mb-2">Error</h2>
+            <p className="text-slate-700 mb-4">{error}</p>
+            <Button onClick={fetchStorageItems}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Retry Loading Storage
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       <Navigation />
@@ -79,17 +118,16 @@ const StoragePage = () => {
             <h1 className="text-2xl font-bold bg-gradient-to-r from-accent-blue via-purple to-teal bg-clip-text text-transparent">Storage Explorer</h1>
           </div>
           <p className="text-slate-600">Browse content items stored in the decentralized IPFS-like storage</p>
+          <div className="mt-3">
+            <Button variant="outline" onClick={fetchStorageItems} className="text-sm">
+              <RefreshCw className="h-3 w-3 mr-2" />
+              Refresh Storage Data
+            </Button>
+          </div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {isLoading ? (
-            <Card className="p-6 flex items-center justify-center h-40 bg-white bg-opacity-70">
-              <div className="flex flex-col items-center gap-3">
-                <div className="h-8 w-8 border-4 border-t-purple border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
-                <p className="text-sm text-slate-500">Loading content...</p>
-              </div>
-            </Card>
-          ) : storedItems.length === 0 ? (
+          {storedItems.length === 0 ? (
             <Card className="p-6 flex flex-col items-center justify-center h-40 bg-white bg-opacity-70">
               <Database className="h-12 w-12 text-slate-300 mb-3" />
               <p className="text-slate-500">No content items stored yet</p>

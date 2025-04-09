@@ -14,9 +14,7 @@ const DecentralizedAppVisual = () => {
   
   const handleSendMessage = (message: string) => {
     // The actual processing is now handled by the ChatInterface component
-    toast({
-      description: "Message sent to decentralized network",
-    });
+    toast.info("Message sent to decentralized network");
   };
 
   return (

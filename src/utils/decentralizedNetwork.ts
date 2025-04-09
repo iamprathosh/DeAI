@@ -1,3 +1,4 @@
+
 import { toast } from "sonner";
 
 // Define types for our network simulation
@@ -145,7 +146,7 @@ export const sendNetworkMessage = (
     // Simulate network delay
     setTimeout(() => {
       resolve(message.id);
-      toast(`Message delivered: ${type} from ${fromId.substring(0, 8)}... to ${toId.substring(0, 8)}...`);
+      toast.info(`Message delivered: ${type} from ${fromId.substring(0, 8)}... to ${toId.substring(0, 8)}...`);
     }, 300 + Math.random() * 700); // Random delay between 300-1000ms
   });
 };

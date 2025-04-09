@@ -63,8 +63,7 @@ const ChatInterface = ({ onSendMessage }: ChatInterfaceProps) => {
       setMessages(msgs => [...msgs, aiMessage]);
       
       // Show notification about the decentralized processing
-      toast({
-        title: "Decentralized Processing Complete",
+      toast.success("Decentralized Processing Complete", {
         description: `Routed through ${processingPath.length} nodes. Response stored at CID: ${responseCid.substring(0, 10)}...`,
       });
     } catch (error) {
@@ -79,8 +78,7 @@ const ChatInterface = ({ onSendMessage }: ChatInterfaceProps) => {
       
       setMessages(msgs => [...msgs, errorMessage]);
       
-      toast({
-        title: "Network Error",
+      toast.error("Network Error", {
         description: "Failed to process through decentralized network.",
       });
     } finally {

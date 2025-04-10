@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { processQuery } from '@/utils/llmSimulation';
 import { toast } from "sonner";
+import { getGeminiData, connectToGemini, disconnectFromGemini } from '@/utils/geminiSimulation';
 
 interface Message {
   id: number;
@@ -31,7 +32,11 @@ const ChatInterface = ({ onSendMessage }: ChatInterfaceProps) => {
   ]);
   const [isThinking, setIsThinking] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
+
+  // Gemini-specific state variables
+  const [geminiStatus, setGeminiStatus] = useState<string>('disconnected');
+  const [geminiData, setGeminiData] = useState<string>('');
+
   const handleSend = async () => {
     if (input.trim() === '') return;
     
@@ -95,6 +100,17 @@ const ChatInterface = ({ onSendMessage }: ChatInterfaceProps) => {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Gemini-specific event handlers
+  const connectToGemini = () => {
+    setGeminiStatus('connected');
+    setGeminiData('Gemini data loaded');
+  };
+
+  const disconnectFromGemini = () => {
+    setGeminiStatus('disconnected');
+    setGeminiData('');
+  };
 
   return (
     <Card className="flex flex-col bg-white bg-opacity-95 backdrop-blur-lg shadow-lg rounded-xl overflow-hidden w-full max-w-lg h-[500px] border border-slate-200">
@@ -172,6 +188,23 @@ const ChatInterface = ({ onSendMessage }: ChatInterfaceProps) => {
             <Send className="h-4 w-4" />
           </Button>
         </div>
+      </div>
+
+      {/* Gemini-specific controls */}
+      <div className="p-4 border-t border-slate-100">
+        <div className="flex items-center gap-2">
+          <Button onClick={connectToGemini} disabled={geminiStatus === 'connected'}>
+            Connect to Gemini
+          </Button>
+          <Button onClick={disconnectFromGemini} disabled={geminiStatus === 'disconnected'}>
+            Disconnect from Gemini
+          </Button>
+        </div>
+        {geminiStatus === 'connected' && (
+          <div className="mt-2 text-xs text-slate-500">
+            {geminiData}
+          </div>
+        )}
       </div>
     </Card>
   );

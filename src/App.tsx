@@ -9,6 +9,7 @@ import NetworkPage from "./pages/NetworkPage";
 import StoragePage from "./pages/StoragePage";
 import NotFound from "./pages/NotFound";
 import DatabaseWarning from "./components/DatabaseWarning";
+import GeminiPage from "./pages/GeminiPage";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,7 @@ const App = () => {
           <Route path="/" element={<Index />} />
           <Route path="/network" element={<NetworkPage />} />
           <Route path="/storage" element={<StoragePage />} />
+          <Route path="/gemini" element={<GeminiPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

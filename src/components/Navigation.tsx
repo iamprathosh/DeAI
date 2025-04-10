@@ -8,13 +8,14 @@ import {
   BreadcrumbPage, 
   BreadcrumbSeparator 
 } from "@/components/ui/breadcrumb";
-import { Home, Network, Database, HelpCircle } from 'lucide-react';
+import { Home, Network, Database, HelpCircle, Star } from 'lucide-react';
 
 const routes: Record<string, { label: string; icon: React.ReactNode }> = {
   '': { label: 'Home', icon: <Home className="h-4 w-4" /> },
   'network': { label: 'Network Monitor', icon: <Network className="h-4 w-4" /> },
   'storage': { label: 'Storage Explorer', icon: <Database className="h-4 w-4" /> },
   'about': { label: 'About', icon: <HelpCircle className="h-4 w-4" /> },
+  'gemini': { label: 'Gemini', icon: <Star className="h-4 w-4" /> },
 };
 
 const Navigation = () => {

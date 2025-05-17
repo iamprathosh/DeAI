@@ -1,89 +1,108 @@
-
 import { sendNetworkMessage } from './decentralizedNetwork';
 import { addToIPFS, getFromIPFS, updateContentMetadata } from './ipfsStorage';
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold, ChatSession } from "@google/generative-ai";
 
 // Simulate basic language model capabilities
-const generateResponse = (prompt: string): string => {
-  // Very basic response generation for demonstration
-  const responses = [
-    `Based on your query "${prompt.substring(0, 20)}...", I've analyzed the relevant data and found that decentralized networks offer significant advantages in terms of resilience and privacy.`,
-    `To answer "${prompt.substring(0, 20)}...", I've consulted my knowledge base. The key insight is that peer-to-peer architectures eliminate single points of failure.`,
-    `Regarding "${prompt.substring(0, 20)}...", several studies suggest that distributed storage solutions like IPFS provide superior content addressing compared to traditional URL-based approaches.`,
-    `Your question about "${prompt.substring(0, 20)}..." is interesting. The consensus among researchers is that decentralized AI models can operate with better privacy guarantees than centralized alternatives.`,
-    `I've processed your request "${prompt.substring(0, 20)}..." and found that the combination of blockchain technology with distributed file storage creates robust systems for data integrity.`
-  ];
-  
-  return responses[Math.floor(Math.random() * responses.length)];
+// ...existing code...
+// Global chat history for DeAI (Gemini simulation)
+// let deaiChatHistory: DeAIMessage[] = []; // Commented out as history will be managed by ChatSession
+
+// Initialize the Gemini Pro API client and model
+// IMPORTANT: Replace "GEMINI_API_KEY" with your actual API key
+const API_KEY = "AIzaSyB1IaB8GhhR5hawGO0XIj1o0fO2yFiMr8A"; 
+const genAI = new GoogleGenerativeAI(API_KEY);
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); 
+
+let deaiChatSession: ChatSession | null = null;
+
+const getDeAIChatSession = (): ChatSession => {
+  if (!deaiChatSession) {
+    deaiChatSession = model.startChat({
+      history: [], 
+      generationConfig: {
+        maxOutputTokens: 200, 
+      },
+      safetySettings: [
+        {
+          category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+        },
+        {
+          category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+          threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+        },
+      ],
+    });
+  }
+  return deaiChatSession;
 };
 
-// Process a query through our simulated network
-export const processQuery = async (query: string): Promise<{
+// Simulates sending a message to Gemini and getting a response, considering history. - Old simulation code removed for brevity
+
+export const processDeAIQuery = async (query: string): Promise<{
   response: string;
   responseCid: string;
   processingPath: string[];
 }> => {
-  console.log('Processing query:', query);
+  console.log('Processing DeAI query with actual Gemini API:', query);
   
-  // Step 1: Store the query in IPFS
-  const queryCid = await addToIPFS(query, { type: 'query' });
-  console.log('Query stored with CID:', queryCid);
-  
-  // Step 2: Send query to LLM node through network
-  const processingPath = ['client'];
-  
-  // Send to random standard node first
-  const standardNodeId = `node-${Math.floor(Math.random() * 15)}`;
-  await sendNetworkMessage('client', standardNodeId, 'query', queryCid);
-  processingPath.push(standardNodeId);
-  
-  // Forward to LLM
-  await sendNetworkMessage(standardNodeId, 'llm-main', 'query', queryCid);
-  processingPath.push('llm-main');
-  
-  // Step 3: LLM generates response
-  const response = generateResponse(query);
-  
-  // Step 4: Store response in IPFS through an IPFS node
-  const ipfsNodeId = `ipfs-${Math.floor(Math.random() * 5)}`;
-  await sendNetworkMessage('llm-main', ipfsNodeId, 'storage', response);
-  processingPath.push(ipfsNodeId);
-  
-  const responseCid = await addToIPFS(response, { 
-    type: 'response',
-    queryId: queryCid,
+  const chat = getDeAIChatSession();
+  let aiResponseText = "Sorry, I couldn't get a response from DeAI.";
+
+  try {
+    const result = await chat.sendMessage(query);
+    const response = result.response;
+    aiResponseText = response.text();
+
+  } catch (error) {
+    console.error("Error calling Gemini API:", error);
+    if (error instanceof Error) {
+        aiResponseText = `Error communicating with DeAI: ${error.message}`;
+    }
+    deaiChatSession = null; 
+  }
+
+  const queryCidPayload = { type: 'query-deai-gemini-api', timestamp: Date.now(), queryText: query };
+  const queryCid = await addToIPFS(JSON.stringify(queryCidPayload));
+
+  const processingPath = ['user-device', 'gemini-api-service', 'user-device'];
+
+  const responseCidPayload = {
+    type: 'response-deai-gemini-api',
+    queryCid,
     timestamp: Date.now(),
-    path: processingPath.join('->')
-  });
-  
-  // Link the query to this response
+    responseText: aiResponseText,
+    processingPathUsed: processingPath.join('->')
+  };
+  const responseCid = await addToIPFS(JSON.stringify(responseCidPayload));
+
   await updateContentMetadata(queryCid, {
     responseCid,
     processed: true,
+    status: 'DeAIProcessedWithGeminiAPI',
     timestamp: Date.now()
   });
-  
-  console.log('Response stored with CID:', responseCid);
-  
-  // Step 5: Send response back through network
-  await sendNetworkMessage(ipfsNodeId, standardNodeId, 'response', responseCid);
-  processingPath.push(standardNodeId);
-  
-  await sendNetworkMessage(standardNodeId, 'client', 'response', responseCid);
-  processingPath.push('client');
-  
+
+  console.log('DeAI (Gemini API) Response stored with CID:', responseCid);
+
   return {
-    response,
+    response: aiResponseText,
     responseCid,
-    processingPath
+    processingPath,
   };
 };
 
-// Retrieve content by CID
-export const retrieveContent = async (cid: string): Promise<string> => {
-  try {
-    return await getFromIPFS(cid);
-  } catch (error) {
-    console.error('Error retrieving content:', error);
-    return 'Content not found or inaccessible';
+export const resetDeAIChatHistory = () => {
+  if (deaiChatSession) {
+    deaiChatSession = null; 
   }
+  console.log("DeAI (Gemini API) chat session has been reset.");
 };

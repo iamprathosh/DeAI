@@ -1,11 +1,12 @@
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Send } from 'lucide-react';
+import { toast } from "sonner";
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { processQuery } from '@/utils/llmSimulation';
-import { toast } from "sonner";
-import { getGeminiData, connectToGemini, disconnectFromGemini } from '@/utils/geminiSimulation';
+import { processDeAIQuery, resetDeAIChatHistory } from '@/utils/llmSimulation';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 interface Message {
   id: number;
@@ -25,17 +26,20 @@ const ChatInterface = ({ onSendMessage }: ChatInterfaceProps) => {
   const [messages, setMessages] = useState<Message[]>([
     { 
       id: 1, 
-      text: "Welcome! I'm a decentralized AI assistant. Ask me anything about Web3, IPFS, or AI technology.", 
+      text: "Welcome! I'm a decentralized AI assistant. Ask me anything about Web3, IPFS, or AI technology. You can also try the DeAI assistant mode.", 
       isUser: false, 
       timestamp: new Date() 
     }
   ]);
   const [isThinking, setIsThinking] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [useDeAI, setUseDeAI] = useState<boolean>(false); // New state for DeAI toggle
 
-  // Gemini-specific state variables
-  const [geminiStatus, setGeminiStatus] = useState<string>('disconnected');
-  const [geminiData, setGeminiData] = useState<string>('');
+  useEffect(() => {
+    // Reset DeAI chat history when the component mounts or when switching modes
+    resetDeAIChatHistory();
+  }, [useDeAI]);
+
 
   const handleSend = async () => {
     if (input.trim() === '') return;
@@ -48,16 +52,33 @@ const ChatInterface = ({ onSendMessage }: ChatInterfaceProps) => {
     };
     
     setMessages(prev => [...prev, userMessage]);
-    onSendMessage(input);
+    onSendMessage(input); // This prop might need to be re-evaluated based on its usage
+    const currentInput = input;
     setInput('');
     setIsThinking(true);
     
     try {
-      // Process the query through our simulated backend
-      const { response, responseCid, processingPath } = await processQuery(input);
+      let response, responseCid, processingPath;
+      let toastTitle = "Decentralized Processing Complete";
+      let toastDescription = "";
+
+      if (useDeAI) {
+        const deaiResult = await processDeAIQuery(currentInput);
+        response = deaiResult.response;
+        responseCid = deaiResult.responseCid;
+        processingPath = deaiResult.processingPath;
+        toastTitle = "DeAI Processing Complete";
+        toastDescription = `Processed by DeAI. Response stored at CID: ${responseCid.substring(0, 10)}...`;
+      } else {
+        const originalResult = await processDeAIQuery(currentInput);
+        response = originalResult.response;
+        responseCid = originalResult.responseCid;
+        processingPath = originalResult.processingPath;
+        toastDescription = `Routed through ${processingPath.length} nodes. Response stored at CID: ${responseCid.substring(0, 10)}...`;
+      }
       
       const aiMessage: Message = {
-        id: messages.length + 2,
+        id: messages.length + 2, // Ensure unique ID
         text: response,
         isUser: false,
         timestamp: new Date(),
@@ -67,16 +88,16 @@ const ChatInterface = ({ onSendMessage }: ChatInterfaceProps) => {
       
       setMessages(msgs => [...msgs, aiMessage]);
       
-      // Show notification about the decentralized processing
-      toast.success("Decentralized Processing Complete", {
-        description: `Routed through ${processingPath.length} nodes. Response stored at CID: ${responseCid.substring(0, 10)}...`,
+      toast.success(toastTitle, {
+        description: toastDescription,
       });
+
     } catch (error) {
       console.error('Error processing query:', error);
-      
+      const mode = useDeAI ? "DeAI assistant" : "decentralized network";
       const errorMessage: Message = {
-        id: messages.length + 2,
-        text: "Sorry, there was an error processing your request through the decentralized network.",
+        id: messages.length + 2, // Ensure unique ID
+        text: `Sorry, there was an error processing your request through the ${mode}.`,
         isUser: false,
         timestamp: new Date()
       };
@@ -84,7 +105,7 @@ const ChatInterface = ({ onSendMessage }: ChatInterfaceProps) => {
       setMessages(msgs => [...msgs, errorMessage]);
       
       toast.error("Network Error", {
-        description: "Failed to process through decentralized network.",
+        description: `Failed to process through ${mode}.`,
       });
     } finally {
       setIsThinking(false);
@@ -101,110 +122,78 @@ const ChatInterface = ({ onSendMessage }: ChatInterfaceProps) => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Gemini-specific event handlers
-  const connectToGemini = () => {
-    setGeminiStatus('connected');
-    setGeminiData('Gemini data loaded');
-  };
-
-  const disconnectFromGemini = () => {
-    setGeminiStatus('disconnected');
-    setGeminiData('');
-  };
-
   return (
     <Card className="flex flex-col bg-white bg-opacity-95 backdrop-blur-lg shadow-lg rounded-xl overflow-hidden w-full max-w-lg h-[500px] border border-slate-200">
-      <div className="p-4 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-blue-50">
-        <h2 className="text-lg font-medium text-slate-800">Decentralized AI Assistant</h2>
-        <div className="flex items-center gap-2 mt-1">
-          <div className="h-2 w-2 rounded-full bg-accent-blue animate-pulse"></div>
-          <span className="text-xs text-slate-500">Connected to the browser-based network</span>
+      <div className="p-4 border-b border-slate-200 flex justify-between items-center">
+        <h2 className="text-lg font-semibold text-slate-800">Chat Assistant</h2>
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="deai-toggle"
+            checked={useDeAI}
+            onCheckedChange={() => {
+              setUseDeAI(!useDeAI);
+              // Optionally, clear messages or add a system message about mode switch
+              setMessages(prev => [...prev, {
+                id: prev.length + 1,
+                text: `Switched to ${!useDeAI ? 'DeAI Assistant' : 'Decentralized Network'} mode.`,
+                isUser: false,
+                timestamp: new Date(),
+                processingPath: ['system']
+              }]);
+            }}
+          />
+          <Label htmlFor="deai-toggle" className="text-sm text-slate-600">
+            Use DeAI Assistant
+          </Label>
         </div>
       </div>
       
-      <div className="flex-grow overflow-y-auto p-4 space-y-4">
-        {messages.map((message) => (
-          <div 
-            key={message.id} 
-            className={`flex ${message.isUser ? 'justify-end' : 'justify-start'} animate-fadeIn`}
-            style={{ animationDelay: `${(message.id - 1) * 0.1}s` }}
-          >
-            <div 
-              className={`max-w-[80%] p-3 rounded-lg ${
-                message.isUser 
-                  ? 'bg-accent-blue text-white rounded-tr-none' 
-                  : 'bg-slate-100 text-slate-800 rounded-tl-none'
-              }`}
-            >
-              <p className="text-sm">{message.text}</p>
-              {message.cid && (
-                <div className="text-xs mt-1 opacity-70">
-                  CID: {message.cid.substring(0, 10)}...
-                </div>
-              )}
-              <div className="text-xs mt-1 opacity-70 text-right">
-                {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </div>
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.map((msg) => (
+          <div key={msg.id} className={`flex ${msg.isUser ? 'justify-end' : 'justify-start'}`}>
+            <div className={`max-w-[70%] p-3 rounded-lg ${msg.isUser ? 'bg-accent-blue text-white' : 'bg-slate-200 text-slate-800'}`}>
+              <p className="text-sm">{msg.text}</p>
+              <p className="text-xs mt-1 ${msg.isUser ? 'text-blue-200' : 'text-slate-500'}">
+                {msg.timestamp.toLocaleTimeString()}
+                {msg.cid && (
+                  <span title={`IPFS CID: ${msg.cid} | Path: ${msg.processingPath?.join(' -> ')}`}>
+                    {' '}| CID: {msg.cid.substring(0,8)}...
+                  </span>
+                )}
+                {msg.processingPath && !msg.cid && (
+                   <span title={`Path: ${msg.processingPath?.join(' -> ')}`}>
+                    {' '}| Path: {msg.processingPath.join(' -> ')}
+                  </span>
+                )}
+              </p>
             </div>
           </div>
         ))}
-        
         {isThinking && (
           <div className="flex justify-start">
-            <div className="bg-slate-100 p-3 rounded-lg rounded-tl-none max-w-[80%]">
-              <div className="flex space-x-1 items-center">
-                <div className="w-2 h-2 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '0s' }}></div>
-                <div className="w-2 h-2 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                <div className="w-2 h-2 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-              </div>
-              <div className="text-xs mt-2 text-slate-500">Processing through decentralized network...</div>
+            <div className="max-w-[70%] p-3 rounded-lg bg-slate-200 text-slate-800">
+              <p className="text-sm italic">Assistant is typing...</p>
             </div>
           </div>
         )}
-        
         <div ref={messagesEndRef} />
       </div>
       
-      <div className="p-4 border-t border-slate-100">
+      <div className="p-4 border-t border-slate-200">
         <div className="flex items-center gap-2">
-          <Input
-            placeholder="Ask anything..."
+          <input
+            type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => {
-              if (e.key === 'Enter') {
-                handleSend();
-              }
-            }}
-            className="flex-grow bg-slate-50"
+            onKeyPress={handleKeyPress}
+            placeholder="Type your message..."
+            className="flex-1 p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-accent-blue focus:border-transparent outline-none"
             disabled={isThinking}
           />
-          <Button 
-            onClick={handleSend} 
-            disabled={isThinking || input.trim() === ''}
-            size="icon"
-            className="bg-accent-blue hover:bg-blue-600 text-white"
-          >
-            <Send className="h-4 w-4" />
+          <Button onClick={handleSend} disabled={isThinking || input.trim() === ''} className="bg-accent-blue hover:bg-accent-blue-dark">
+            Send
           </Button>
         </div>
-      </div>
-
-      {/* Gemini-specific controls */}
-      <div className="p-4 border-t border-slate-100">
-        <div className="flex items-center gap-2">
-          <Button onClick={connectToGemini} disabled={geminiStatus === 'connected'}>
-            Connect to Gemini
-          </Button>
-          <Button onClick={disconnectFromGemini} disabled={geminiStatus === 'disconnected'}>
-            Disconnect from Gemini
-          </Button>
-        </div>
-        {geminiStatus === 'connected' && (
-          <div className="mt-2 text-xs text-slate-500">
-            {geminiData}
-          </div>
-        )}
       </div>
     </Card>
   );

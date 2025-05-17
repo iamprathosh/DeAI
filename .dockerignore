@@ -1,0 +1,38 @@
+# Git
+.git
+.gitignore
+
+# Node modules
+node_modules
+
+# Build output
+dist
+build
+out
+
+# IDE & OS files
+.vscode
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.DS_Store
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local environment variables
+.env
+.env*.local
+.env*.development
+.env*.test
+.env*.production
+
+# Vite specific
+.vite
+vite.config.ts.timestamp-*.mjs
